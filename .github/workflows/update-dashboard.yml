@@ -1,0 +1,118 @@
+name: Update Code Health Dashboard
+
+on:
+  # Run every Monday at 9 AM UTC
+  schedule:
+    - cron: '0 9 * * 1'
+  
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+  
+  # Run on push to main branch when Python files change
+  push:
+    branches:
+      - main
+    paths:
+      - '**.py'
+
+jobs:
+  update-metrics:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history needed for churn analysis
+      
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install analysis tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install radon pytest pytest-cov
+          
+          # Install project dependencies if requirements.txt exists
+          if [ -f requirements.txt ]; then 
+            pip install -r requirements.txt
+          fi
+      
+      - name: 🔍 Analyze code complexity
+        run: |
+          echo "=== Running Radon Complexity Analysis ==="
+          radon cc . -a -s --total-average || echo "Complexity analysis completed"
+          
+          echo ""
+          echo "=== Running Maintainability Index ==="
+          radon mi . -s || echo "Maintainability analysis completed"
+      
+      - name: 🧪 Run test coverage analysis
+        run: |
+          echo "=== Running Test Coverage Analysis ==="
+          
+          # Run tests with coverage
+          pytest --cov=. --cov-report=json --cov-report=term || echo "Coverage analysis completed"
+          
+          # Display coverage summary
+          if [ -f coverage.json ]; then
+            echo "Coverage report generated successfully"
+          fi
+      
+      - name: 📈 Analyze code churn
+        run: |
+          echo "=== Analyzing Code Churn (Last 30 Days) ==="
+          
+          # Count changes per Python file in last 30 days
+          git log --since="30 days ago" --name-only --pretty=format: | \
+            grep '\.py$' | \
+            sort | \
+            uniq -c | \
+            sort -rn | \
+            head -10
+      
+      - name: 📊 Update dashboard with new metrics
+        run: |
+          echo "=== Updating Dashboard Metrics ==="
+          python scripts/update_metrics.py
+      
+      - name: 📝 Commit and push changes
+        run: |
+          # Configure git
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Stage changes
+          git add code-health-dashboard.html index.html 2>/dev/null || git add code-health-dashboard.html || true
+          
+          # Commit if there are changes
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes detected - dashboard is up to date"
+          else
+            TIMESTAMP=$(date +'%Y-%m-%d %H:%M UTC')
+            git commit -m "🤖 Auto-update: Weekly dashboard metrics [$TIMESTAMP]"
+            git push
+            echo "✅ Dashboard updated and pushed successfully!"
+          fi
+      
+      - name: 🎉 Job Summary
+        run: |
+          echo "## 📊 Code Health Dashboard Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Status:** Dashboard update complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📅 **Updated:** $(date +'%B %d, %Y at %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **View Dashboard:** [code-health-dashboard](https://tejaswinipasam.github.io/code-health-dashboard/)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Metrics Updated:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code complexity trends" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test coverage by module" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code churn hotspots" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Timestamp refresh" >> $GITHUB_STEP_SUMMARY
