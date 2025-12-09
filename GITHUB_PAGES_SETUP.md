@@ -1,388 +1,221 @@
-# Hosting Code Health Dashboard on GitHub Pages
+# Code Health Dashboard - GitHub Pages Setup Guide
 
-## Part 1: Setting Up GitHub Pages
+This guide explains how to host your Code Health Dashboard on GitHub Pages with automated weekly updates.
 
-### Step 1: Prepare Your Repository
-```bash
-# Navigate to your project directory
-cd "c:\Users\TejaswiniPasam\OneDrive - Atmosera\Desktop\WEEK2-TUESDAY-CODE HEALTH-DEMO\python code file-code health-demo\python"
+## 🚀 Quick Start
 
-# Initialize git if not already done
-git init
+### Prerequisites
+- GitHub account
+- Git installed locally
+- Python files in your repository
 
-# Rename the dashboard file to index.html (GitHub Pages default)
-# Or keep it as code-health-dashboard.html and link to it
+### Setup Steps
+
+#### 1. Prepare Your Repository
+
+First, rename the dashboard file:
+```powershell
+Rename-Item "code-health-dashboard-1.html" "index.html"
 ```
 
-### Step 2: Create Repository Structure
+Your repository structure should look like:
 ```
 your-repo/
-├── index.html (or code-health-dashboard.html)
+├── index.html                    # Your dashboard (renamed)
+├── customer_servlet.py
+├── invoice_dao.py
+├── payment_processor.py
 ├── .github/
 │   └── workflows/
-│       └── update-dashboard.yml
-├── scripts/
-│   └── update_metrics.py
-└── README.md
+│       └── update-dashboard.yml  # GitHub Action workflow
+└── scripts/
+    └── update-metrics.py         # Metrics update script
 ```
 
-### Step 3: Push to GitHub
-```bash
-# Add all files
+#### 2. Commit and Push to GitHub
+
+```powershell
 git add .
-
-# Commit
-git commit -m "Initial commit: Code health dashboard"
-
-# Create a new repository on GitHub (via web interface)
-# Then link and push:
-git remote add origin https://github.com/tejaswinipasam/code-health-dashboard.git
-git branch -M main
-git push -u origin main
+git commit -m "Set up code health dashboard with automation"
+git push origin main
 ```
 
-### Step 4: Enable GitHub Pages
+#### 3. Enable GitHub Pages
+
+1. Go to your repository on GitHub: `https://github.com/tejaswinipasam/code-health-`
+2. Click **Settings** tab
+3. Click **Pages** in the left sidebar
+4. Under "Build and deployment":
+   - **Source**: Deploy from a branch
+   - **Branch**: main
+   - **Folder**: / (root)
+5. Click **Save**
+
+Your dashboard will be published at:
+```
+https://tejaswinipasam.github.io/code-health-/
+```
+
+*Note: It may take a few minutes for the site to become available.*
+
+## 🤖 Automated Weekly Updates
+
+### How It Works
+
+The GitHub Action workflow (`.github/workflows/update-dashboard.yml`) automatically:
+
+1. **Triggers every Monday at 9:00 AM UTC**
+2. **Analyzes your Python code** using:
+   - Radon (complexity analysis)
+   - Coverage.py (test coverage)
+   - Git log (code churn)
+3. **Updates the dashboard** with fresh metrics
+4. **Commits and pushes** changes back to the repository
+5. **GitHub Pages automatically deploys** the updated dashboard
+
+### Manual Trigger
+
+You can also trigger the workflow manually:
+
 1. Go to your repository on GitHub
-2. Click **Settings** → **Pages** (left sidebar)
-3. Under "Source", select:
-   - **Branch**: `main`
-   - **Folder**: `/ (root)` or `/docs` if you prefer
-4. Click **Save**
-5. GitHub will provide your URL: `https://tejaswinipasam.github.io/code-health-dashboard/`
+2. Click **Actions** tab
+3. Select "Update Code Health Dashboard"
+4. Click **Run workflow** → **Run workflow**
 
-### Step 5: Access Your Dashboard
-- Wait 1-2 minutes for deployment
-- Visit: `https://tejaswinipasam.github.io/code-health-dashboard/`
-- If using `code-health-dashboard.html`: Add filename to URL
+### Customizing the Schedule
 
----
-
-## Part 2: Automating Weekly Updates with GitHub Actions
-
-### Create Update Script
-
-Create `scripts/update_metrics.py`:
-
-```python
-#!/usr/bin/env python3
-"""
-Script to update code health metrics in the dashboard.
-Runs code analysis and updates the HTML file with fresh data.
-"""
-
-import json
-import re
-from datetime import datetime
-import subprocess
-import os
-
-def get_complexity_metrics():
-    """Run radon to get complexity metrics."""
-    try:
-        result = subprocess.run(
-            ['radon', 'cc', '.', '-a', '-s'],
-            capture_output=True,
-            text=True
-        )
-        # Parse output to extract average complexity
-        # This is a simplified example
-        return 30  # Replace with actual parsing logic
-    except:
-        return 30
-
-def get_test_coverage():
-    """Run pytest with coverage to get coverage metrics."""
-    coverage_data = {}
-    try:
-        subprocess.run(['pytest', '--cov=.', '--cov-report=json'], check=True)
-        with open('coverage.json', 'r') as f:
-            data = json.load(f)
-            # Parse coverage data per module
-            coverage_data = {
-                'PaymentProcessor': 42,
-                'InvoiceDAO': 28,
-                'CustomerServlet': 12
-            }
-    except:
-        # Default values if analysis fails
-        coverage_data = {
-            'PaymentProcessor': 42,
-            'InvoiceDAO': 28,
-            'CustomerServlet': 12
-        }
-    return coverage_data
-
-def get_code_churn():
-    """Analyze git history for code churn in last 30 days."""
-    churn_data = []
-    try:
-        result = subprocess.run(
-            ['git', 'log', '--since=30.days.ago', '--name-only', '--pretty=format:'],
-            capture_output=True,
-            text=True
-        )
-        files = result.stdout.split('\n')
-        from collections import Counter
-        file_counts = Counter([f for f in files if f.endswith('.py')])
-        
-        for file, count in file_counts.most_common(3):
-            churn_data.append({'file': file, 'changes': count})
-    except:
-        # Default values
-        churn_data = [
-            {'file': 'invoice_dao.py', 'changes': 47},
-            {'file': 'payment_processor.py', 'changes': 23},
-            {'file': 'customer_servlet.py', 'changes': 12}
-        ]
-    return churn_data
-
-def update_dashboard_html(complexity_data, coverage_data, churn_data):
-    """Update the HTML file with new metrics."""
-    html_file = 'index.html'
-    
-    with open(html_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    # Update complexity data
-    complexity_pattern = r"data: \[([\d,\s]+)\]"
-    new_complexity = f"data: [{complexity_data}]"
-    content = re.sub(complexity_pattern, new_complexity, content, count=1)
-    
-    # Update coverage data
-    coverage_values = [coverage_data.get('PaymentProcessor', 42),
-                      coverage_data.get('InvoiceDAO', 28),
-                      coverage_data.get('CustomerServlet', 12)]
-    coverage_pattern = r"data: \[(\d+),\s*(\d+),\s*(\d+)\]"
-    new_coverage = f"data: [{coverage_values[0]}, {coverage_values[1]}, {coverage_values[2]}]"
-    content = re.sub(coverage_pattern, new_coverage, content, count=1)
-    
-    # Update timestamp
-    timestamp = datetime.now().strftime("%B %d, %Y, %I:%M %p")
-    timestamp_pattern = r'Last updated: [^<]+'
-    content = re.sub(timestamp_pattern, f'Last updated: {timestamp}', content)
-    
-    with open(html_file, 'w', encoding='utf-8') as f:
-        f.write(content)
-    
-    print(f"✅ Dashboard updated successfully at {timestamp}")
-
-if __name__ == "__main__":
-    print("🔍 Gathering code health metrics...")
-    
-    # Get current metrics
-    complexity = get_complexity_metrics()
-    coverage = get_test_coverage()
-    churn = get_code_churn()
-    
-    print(f"📊 Complexity: {complexity}")
-    print(f"📊 Coverage: {coverage}")
-    print(f"📊 Churn: {churn}")
-    
-    # Update HTML
-    update_dashboard_html(
-        complexity_data="38, 35, 32, 30",  # Add new week's data
-        coverage_data=coverage,
-        churn_data=churn
-    )
-```
-
----
-
-## Part 3: GitHub Actions Workflow
-
-Create `.github/workflows/update-dashboard.yml`:
+Edit `.github/workflows/update-dashboard.yml`:
 
 ```yaml
-name: Update Code Health Dashboard
-
 on:
-  # Run every Monday at 9 AM UTC
   schedule:
+    # Every Monday at 9 AM UTC
     - cron: '0 9 * * 1'
-  
-  # Allow manual trigger
-  workflow_dispatch:
-  
-  # Run on push to main (for testing)
-  push:
-    branches:
-      - main
-    paths:
-      - '**.py'
-
-jobs:
-  update-metrics:
-    runs-on: ubuntu-latest
     
-    permissions:
-      contents: write
+    # Every day at midnight UTC
+    # - cron: '0 0 * * *'
     
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for git log analysis
-      
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: 📦 Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install radon pytest pytest-cov
-          # Add any other dependencies your project needs
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      
-      - name: 🔍 Run code analysis
-        run: |
-          echo "Running complexity analysis..."
-          radon cc . -a -s || echo "Radon analysis completed"
-          
-          echo "Running test coverage..."
-          pytest --cov=. --cov-report=json || echo "Coverage analysis completed"
-      
-      - name: 📊 Update dashboard metrics
-        run: |
-          python scripts/update_metrics.py
-      
-      - name: 📝 Commit and push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          git add index.html
-          
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "🤖 Auto-update: Weekly dashboard metrics [$(date +'%Y-%m-%d')]"
-            git push
-          fi
-      
-      - name: 🎉 Summary
-        run: |
-          echo "✅ Dashboard update complete!"
-          echo "📍 View at: https://tejaswinipasam.github.io/code-health-dashboard/"
+    # Every Friday at 5 PM UTC
+    # - cron: '0 17 * * 5'
 ```
 
----
+Cron syntax: `minute hour day-of-month month day-of-week`
 
-## Part 4: Advanced Configuration
+## 📊 What Gets Updated
 
-### Optional: Use GitHub Pages with Docs Folder
+The automation updates:
 
-If you want to keep source code separate:
+1. **Last Updated Timestamp** - Current date/time
+2. **Code Churn Table** - Git commit counts per file
+3. **Test Coverage Chart** - Current coverage percentages
+4. **Complexity Trends** - Average complexity scores
 
-1. Create a `docs/` folder
-2. Move `index.html` to `docs/index.html`
-3. In GitHub Settings → Pages, select `/docs` folder
-4. Update workflow to commit to `docs/index.html`
+## 🔧 Customization
 
-### Optional: Custom Domain
+### Adding More Python Files
 
-1. Go to Settings → Pages
-2. Enter your custom domain (e.g., `dashboard.yourcompany.com`)
-3. Add CNAME record in your DNS provider:
-   ```
-   CNAME: dashboard.yourcompany.com → tejaswinipasam.github.io
-   ```
+Edit `scripts/update-metrics.py`:
 
-### Optional: Password Protection
-
-GitHub Pages doesn't support password protection directly. Options:
-- Use Cloudflare Access (free tier available)
-- Use GitHub private repository + GitHub authentication
-- Deploy to Netlify/Vercel with password protection
-
----
-
-## Testing Your Setup
-
-### Test Locally
-```bash
-# Test the update script
-python scripts/update_metrics.py
-
-# View the dashboard locally
-# Open index.html in your browser
+```python
+python_files = [
+    'customer_servlet.py',
+    'invoice_dao.py',
+    'payment_processor.py',
+    'your_new_file.py',  # Add here
+]
 ```
 
-### Test GitHub Action Manually
-1. Go to **Actions** tab in GitHub
-2. Click **Update Code Health Dashboard**
-3. Click **Run workflow** → **Run workflow**
-4. Monitor the workflow execution
-5. Check if dashboard updates successfully
+### Changing Analysis Tools
 
-### Verify Deployment
-```bash
-# Check deployment status
-curl -I https://tejaswinipasam.github.io/code-health-dashboard/
+The script uses:
+- **Radon** for complexity
+- **Coverage.py** for test coverage
+- **Git log** for churn
 
-# Should return 200 OK
+Install locally to test:
+```powershell
+pip install radon pylint coverage pytest
 ```
 
+### Adjusting Thresholds
+
+Edit the status logic in `scripts/update-metrics.py`:
+
+```python
+if changes > 30:
+    status = 'status-high">Action Needed'
+elif changes > 15:
+    status = 'status-medium">Watch'
+else:
+    status = 'status-low">Healthy'
+```
+
+## 🐛 Troubleshooting
+
+### Dashboard Not Updating
+
+1. Check GitHub Actions logs:
+   - Go to **Actions** tab
+   - Click on the latest workflow run
+   - Review the logs for errors
+
+2. Common issues:
+   - **Python files not found**: Ensure file paths are correct
+   - **Git history too shallow**: Workflow uses `fetch-depth: 0`
+   - **Permission denied**: Workflow has `contents: write` permission
+
+### Site Not Loading
+
+1. Verify GitHub Pages settings
+2. Check that `index.html` is in the root directory
+3. Wait 2-3 minutes after enabling Pages
+
+### Coverage Analysis Failing
+
+If you don't have tests yet, the script falls back to default values. To add real coverage:
+
+1. Create test files (e.g., `test_*.py`)
+2. Install pytest: `pip install pytest`
+3. The workflow will automatically run them
+
+## 📝 Testing Locally
+
+Before pushing, test the update script:
+
+```powershell
+# Install dependencies
+pip install radon pylint coverage pytest
+
+# Run the update script
+python scripts/update-metrics.py
+
+# Check the updated index.html
+# Open in browser to verify changes
+```
+
+## 🔐 Security Notes
+
+- The workflow uses `GITHUB_TOKEN` automatically provided by GitHub
+- No additional secrets needed
+- The bot commits use: `github-actions[bot]@users.noreply.github.com`
+
+## 📅 Next Steps
+
+1. ✅ Rename `code-health-dashboard-1.html` to `index.html`
+2. ✅ Push all files to GitHub
+3. ✅ Enable GitHub Pages
+4. ✅ Wait for the first Monday (or trigger manually)
+5. 🎉 Watch your dashboard update automatically!
+
+## 📚 Additional Resources
+
+- [GitHub Pages Documentation](https://docs.github.com/en/pages)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Radon Documentation](https://radon.readthedocs.io/)
+- [Coverage.py Documentation](https://coverage.readthedocs.io/)
+
 ---
 
-## Troubleshooting
+**Dashboard URL**: https://tejaswinipasam.github.io/code-health-/
 
-### Dashboard not updating?
-- Check GitHub Actions tab for errors
-- Verify file permissions (workflow needs `contents: write`)
-- Ensure script paths are correct
-
-### 404 Error?
-- Wait 2-5 minutes after enabling GitHub Pages
-- Check Settings → Pages for correct branch/folder
-- Verify file is named `index.html` or link includes filename
-
-### Metrics not changing?
-- Check `update_metrics.py` script output in Actions logs
-- Verify analysis tools (radon, pytest) are installed
-- Add debugging output to your script
-
-### Schedule not working?
-- GitHub Actions schedules can delay up to 15 minutes
-- Use `workflow_dispatch` to test manually
-- Check if repository has activity (GitHub may disable inactive workflows)
-
----
-
-## Maintenance
-
-### Weekly Checklist
-- Monitor GitHub Actions for failures
-- Review dashboard accuracy
-- Update "This Sprint's Win" manually or via script
-- Archive old data if needed
-
-### Monthly Review
-- Check GitHub Pages usage/bandwidth
-- Update dependencies in workflow
-- Review and optimize analysis scripts
-- Update color thresholds based on team goals
-
----
-
-## Security Best Practices
-
-1. **Don't commit secrets**: Use GitHub Secrets for any API keys
-2. **Review workflow permissions**: Only grant necessary permissions
-3. **Pin action versions**: Use specific versions (e.g., `@v4` not `@main`)
-4. **Validate inputs**: Sanitize any external data in scripts
-5. **Limit workflow triggers**: Don't allow external PR triggers for private repos
-
----
-
-## Next Steps
-
-1. ✅ Set up GitHub Pages
-2. ✅ Create update script
-3. ✅ Configure GitHub Actions
-4. 📱 Share dashboard URL with team
-5. 📊 Monitor first automated update
-6. 🔄 Iterate based on feedback
-
-Your dashboard will now automatically update every Monday at 9 AM with fresh metrics!
+**Repository**: https://github.com/tejaswinipasam/code-health-
