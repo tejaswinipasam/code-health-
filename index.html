@@ -224,7 +224,7 @@
         <!-- Header -->
         <div class="header">
             <h1>📊 Code Health Dashboard</h1>
-            <div class="last-updated" id="lastUpdated">Last updated: December 9, 2025, 10:30 AM</div>
+            <div class="last-updated" id="lastUpdated">Last updated: December 15, 2025, 09:36 AM</div>
         </div>
 
         <!-- This Sprint's Win -->
@@ -269,18 +269,18 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>InvoiceDAO.py</strong></td>
-                            <td>47 changes</td>
-                            <td><span class="status-badge status-high">Action Needed</span></td>
+                            <td><strong>customer_servlet.py</strong></td>
+                            <td>1 changes</td>
+                            <td><span class="status-badge status-low">Healthy</span></td>
                         </tr>
                         <tr>
-                            <td><strong>PaymentProcessor.py</strong></td>
-                            <td>23 changes</td>
-                            <td><span class="status-badge status-medium">Watch</span></td>
+                            <td><strong>invoice_dao.py</strong></td>
+                            <td>1 changes</td>
+                            <td><span class="status-badge status-low">Healthy</span></td>
                         </tr>
                         <tr>
-                            <td><strong>CustomerServlet.py</strong></td>
-                            <td>12 changes</td>
+                            <td><strong>payment_processor.py</strong></td>
+                            <td>1 changes</td>
                             <td><span class="status-badge status-low">Healthy</span></td>
                         </tr>
                     </tbody>
@@ -309,48 +309,7 @@
                 minute: '2-digit' 
             };
             document.getElementById('lastUpdated').textContent = 
-                'Last updated: ' + now.toLocaleDateString('en-US', options);
-        }
-        updateTimestamp();
-
-        // Complexity Trend Chart
-        const complexityCtx = document.getElementById('complexityChart').getContext('2d');
-        const complexityChart = new Chart(complexityCtx, {
-            type: 'line',
-            data: {
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                datasets: [{
-                    label: 'Complexity Score',
-                    data: [38, 35, 32, 30],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#10b981',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                label += context.parsed.y;
-                                if (context.parsed.y <= 30) {
+                'Last updated: December 15, 2025, 09:36 AM<= 30) {
                                     label += ' (Healthy)';
                                 } else if (context.parsed.y <= 35) {
                                     label += ' (Watch)';
@@ -390,7 +349,7 @@
         const coverageChart = new Chart(coverageCtx, {
             type: 'bar',
             data: {
-                labels: ['PaymentProcessor', 'InvoiceDAO', 'CustomerServlet'],
+                labels: ['Payment Processor', 'Invoice Dao', 'Customer Servlet'],
                 datasets: [{
                     label: 'Test Coverage (%)',
                     data: [42, 28, 12],
